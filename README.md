@@ -48,6 +48,121 @@ Received at 2026-04-28T19:00:13.723Z
 
 ---
 
+## Getting Started
+
+### Option A — From ZIP
+
+#### 1. Unzip and enter the folder
+
+```bash
+unzip bolna-slack-integration.zip
+cd clean_bolna
+```
+
+#### 2. Install dependencies
+
+```bash
+npm install
+```
+
+#### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your Slack webhook URL:
+
+```env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+PORT=3000
+```
+
+#### 4. Run the server
+
+```bash
+node server.js
+# 🚀 Server listening on port 3000
+```
+
+---
+
+### Option B — From GitHub
+
+#### 1. Clone the repo
+
+```bash
+git clone https://github.com/lazerbeam47/bolna-slack-integration
+cd bolna-slack-integration
+```
+
+#### 2. Install dependencies
+
+```bash
+npm install
+```
+
+#### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your Slack webhook URL:
+
+```env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+PORT=3000
+```
+
+#### 4. Run the server
+
+```bash
+node server.js
+# 🚀 Server listening on port 3000
+```
+
+---
+
+### After Running (Both Options)
+
+#### 5. Expose it publicly via Cloudflare Tunnel
+
+Bolna needs a public URL to POST to. Use Cloudflare Tunnel — no account needed:
+
+```bash
+npx cloudflared tunnel --url http://localhost:3000
+# → https://some-random-name.trycloudflare.com
+```
+
+#### 6. Update your Bolna agent webhook
+
+1. Go to **https://platform.bolna.ai** → open your agent
+2. Click the **Analytics Tab**
+3. Paste your tunnel URL in **"Push all execution data to webhook"**:
+   ```
+   https://some-random-name.trycloudflare.com/webhook/bolna
+   ```
+4. Click **Save agent**
+
+#### 7. Test it
+
+```bash
+curl -X POST http://localhost:3000/webhook/bolna \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 12345,
+    "agent_id": "d311e737-70e6-4075-bef6-c0ef3a7026b4",
+    "status": "completed",
+    "transcript": "Agent: Hello!\nUser: Hi, I need help.",
+    "telephony_data": { "duration": 67 }
+  }'
+```
+
+You should see a Slack message appear instantly. ✅
+
+---
+
 ## Deployment Status
 
 ### ✅ Already Deployed
@@ -62,13 +177,11 @@ Bolna webhook URL is configured to:
 https://bolna-slack-integration-ybbw.onrender.com/webhook/bolna
 ```
 
-> ⚠️ **If the Render free tier limit is hit**, you can either deploy your own instance or run it locally. Steps for both are below.
+> ⚠️ **If the Render free tier limit is hit**, you can either deploy your own instance or run it locally using the steps above.
 
 ---
 
-## If the Free Tier Limit Is Hit
-
-### Option A — Deploy Your Own Instance on Render (Free)
+## Deploy Your Own Instance on Render (Free)
 
 1. Fork this repo to your GitHub account
 2. Go to **https://render.com** → Sign up → **New Web Service** → connect your forked repo
@@ -84,78 +197,6 @@ https://bolna-slack-integration-ybbw.onrender.com/webhook/bolna
    ```
    https://your-app.onrender.com/webhook/bolna
    ```
-
----
-
-### Option B — Run Locally
-
-#### Prerequisites
-- [Node.js](https://nodejs.org) v18+
-- A [Slack](https://slack.com) workspace with an Incoming Webhook URL
-- A [Bolna](https://platform.bolna.ai) account with an agent
-
-#### 1. Clone the repo
-
-```bash
-git clone https://github.com/lazerbeam47/bolna-slack-integration
-cd bolna-slack-integration
-npm install
-```
-
-#### 2. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
-PORT=3000
-```
-
-#### 3. Run the server
-
-```bash
-node server.js
-# 🚀 Server listening on port 3000
-```
-
-#### 4. Expose it publicly via Cloudflare Tunnel
-
-Bolna needs a public URL to POST to. Use Cloudflare Tunnel — no account needed:
-
-```bash
-npx cloudflared tunnel --url http://localhost:3000
-# → https://some-random-name.trycloudflare.com
-```
-
-#### 5. Update Bolna agent webhook
-
-1. Go to **https://platform.bolna.ai** → open your agent
-2. Click the **Analytics Tab**
-3. Paste your tunnel URL in **"Push all execution data to webhook"**:
-   ```
-   https://some-random-name.trycloudflare.com/webhook/bolna
-   ```
-4. Click **Save agent**
-
-#### 6. Test it
-
-```bash
-curl -X POST http://localhost:3000/webhook/bolna \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": 12345,
-    "agent_id": "d311e737-70e6-4075-bef6-c0ef3a7026b4",
-    "status": "completed",
-    "transcript": "Agent: Hello!\nUser: Hi, I need help.",
-    "telephony_data": { "duration": 67 }
-  }'
-```
-
-You should see a Slack message appear instantly. ✅
 
 ---
 
