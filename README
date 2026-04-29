@@ -1,0 +1,144 @@
+# Bolna → Slack Alert Integration
+
+Sends a Slack message whenever a Bolna voice call ends, including:
+- Call `id`
+- `agent_id`
+- `duration` (seconds)
+- `transcript`
+
+---
+
+## How It Works
+
+```
+Bolna call ends
+  → Bolna POSTs webhook payload to your server (/webhook/bolna)
+    → server filters for status = "completed"
+      → server sends formatted Slack message via Incoming Webhook
+```
+
+---
+
+## Setup
+
+### 1. Slack — Create an Incoming Webhook
+
+1. Go to https://api.slack.com/apps → **Create New App** → From scratch
+2. Name it (e.g. `Bolna Alerts`), select your workspace
+3. Left sidebar → **Incoming Webhooks** → toggle **On**
+4. Click **Add New Webhook to Workspace**, choose a channel
+5. Copy the webhook URL
+
+### 2. Server — Install & Run
+
+```bash
+npm install
+cp .env.example .env
+# Edit .env and paste your Slack webhook URL
+node server.js
+```
+
+Your server starts at `http://localhost:3000`.
+
+### 3. Expose Your Server to the Internet
+
+Bolna needs to reach your server publicly. Use **ngrok** for local testing:
+
+```bash
+npx ngrok http 3000
+# Copy the https://xxxx.ngrok.io URL
+```
+
+For production, deploy to Railway (recommended), Render, Fly.io, or any Node.js host.
+
+Railway quick deploy:
+1. Create a new project at https://railway.app
+2. Connect your GitHub repo or push your code
+3. In Railway, add an environment variable named `SLACK_WEBHOOK_URL` and set it to your Slack Incoming Webhook URL (Settings → Variables)
+4. Ensure `package.json` has a start script, e.g.:
+
+```json
+"scripts": {
+  "start": "node server.js"
+}
+```
+
+5. Deploy — Railway will provide a public HTTPS URL. Use:
+
+```
+https://<your-railway-url>/webhook/bolna
+```
+
+Note: Railway provides a public HTTPS URL; if the URL changes update the webhook in the Bolna dashboard. Also confirm the environment variable is set in Railway so the server can post to Slack.
+
+### 4. Configure Bolna Agent Webhook
+
+**Option A — Dashboard (easiest):**
+1. Log in at https://platform.bolna.ai
+2. Open your agent (or clone template `d311e737-70e6-4075-bef6-c0ef3a7026b4`)
+3. Go to the **Analytics Tab**
+4. Paste your URL in **"Push all execution data to webhook"**:
+   `https://your-server.com/webhook/bolna`
+5. Click **Save agent**
+
+**Option B — API:**
+```bash
+curl -X PATCH https://api.bolna.ai/v2/agent/<YOUR_AGENT_ID> \
+  -H "Authorization: Bearer <BOLNA_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"webhook_url": "https://your-server.com/webhook/bolna"}'
+```
+
+---
+
+## Webhook Payload Reference
+
+Bolna sends this on every status change. We only act on `status = "completed"`.
+
+```json
+{
+  "id": 7432382142914,
+  "agent_id": "3c90c3cc-0d44-4b50-8888-8dd25736052a",
+  "status": "completed",
+  "transcript": "Agent: Hello...\nUser: Hi...",
+  "conversation_time": 123,
+  "telephony_data": {
+    "duration": 42,
+    "to_number": "+10123456789",
+    "from_number": "+1987654007"
+  }
+}
+```
+
+The server extracts:
+| Field | Source in payload |
+|---|---|
+| `id` | `body.id` |
+| `agent_id` | `body.agent_id` |
+| `duration` | `body.telephony_data.duration` (falls back to `conversation_time`) |
+| `transcript` | `body.transcript` |
+
+---
+
+## IP Whitelist
+
+Bolna sends webhooks from: `13.203.39.153`  
+Whitelist this IP in your firewall/security group.
+
+---
+
+## Testing Locally
+
+```bash
+curl -X POST http://localhost:3000/webhook/bolna \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 12345,
+    "agent_id": "d311e737-70e6-4075-bef6-c0ef3a7026b4",
+    "status": "completed",
+    "transcript": "Agent: Hello, how can I help?\nUser: I need support.",
+    "telephony_data": { "duration": 67 }
+  }'
+```
+
+You should see a Slack message appear in your channel immediately.
